@@ -1,11 +1,11 @@
 # Ketamine Addiction Research Daily Report
 
-Automated daily literature monitoring for ketamine addiction research, powered by PubMed + Zhipu AI.
+Automated daily literature monitoring for ketamine addiction research, powered by PubMed + NVIDIA Nemotron.
 
 ## Features
 
 - **Daily automated PubMed search** for the latest ketamine addiction literature
-- **AI-powered analysis** using GLM-5-Turbo (with fallback to GLM-4.7 → GLM-4.7-Flash)
+- **AI-powered analysis** using NVIDIA Nemotron 3 Super 120B (with fallback to Nemotron 3 Nano 30B)
 - **Traditional Chinese summaries** with PICO analysis and clinical utility ratings
 - **Beautiful HTML reports** deployed to GitHub Pages
 - **Smart deduplication** - only summarizes papers not yet covered in previous reports

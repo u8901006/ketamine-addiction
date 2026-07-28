@@ -3,9 +3,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-const API_BASE = process.env.ZHIPU_API_BASE ?? "https://open.bigmodel.cn/api/coding/paas/v4";
+const API_BASE = process.env.NVIDIA_API_BASE ?? "https://integrate.api.nvidia.com/v1";
 
-const MODEL_CHAIN = ["GLM-5-Turbo", "GLM-4.7", "GLM-4.7-Flash"];
+const MODEL_CHAIN = ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b"];
 
 const SYSTEM_PROMPT = `你是氯胺酮（K他命）成癮研究領域的資深研究員與科學傳播者。你的任務是：
 1. 從提供的醫學文獻中，篩選出最具臨床意義與研究價值的氯胺酮成癮相關論文
@@ -38,7 +38,7 @@ function parseArgs() {
   const opts = {
     input: "new_papers.json",
     output: "docs/ketamine-report.html",
-    apiKey: process.env.ZHIPU_API_KEY ?? "",
+    apiKey: process.env.NVIDIA_API_KEY ?? "",
   };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -170,9 +170,11 @@ ${papersText}
               { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: prompt },
             ],
-            temperature: 0.3,
-            top_p: 0.9,
-            max_tokens: 50000,
+            temperature: 1.0,
+            top_p: 0.95,
+            max_tokens: 16384,
+            stream: false,
+            chat_template_kwargs: { enable_thinking: false },
           }),
           signal: AbortSignal.timeout(480000),
         });
@@ -320,7 +322,7 @@ function generateHtml(analysis) {
     }
   }
 
-  const usedModel = analysis._model ?? "GLM-5-Turbo";
+  const usedModel = analysis._model ?? MODEL_CHAIN[0];
 
   return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -407,7 +409,7 @@ function generateHtml(analysis) {
       <div class="header-meta">
         <span class="badge badge-date">📅 ${dateDisplay}</span>
         <span class="badge badge-count">📊 ${totalCount} 篇文獻</span>
-        <span class="badge badge-source">Powered by PubMed + Zhipu AI</span>
+        <span class="badge badge-source">Powered by PubMed + NVIDIA Nemotron</span>
       </div>
     </div>
   </header>
@@ -466,7 +468,7 @@ async function main() {
   const opts = parseArgs();
 
   if (!opts.apiKey) {
-    console.error("[ERROR] No API key. Set ZHIPU_API_KEY env var or use --api-key");
+    console.error("[ERROR] No API key. Set NVIDIA_API_KEY env var or use --api-key");
     process.exit(1);
   }
 
