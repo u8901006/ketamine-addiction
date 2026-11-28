@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
 import { resolve } from "node:path";
 
 const PUBMED_SEARCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi";
@@ -35,6 +36,22 @@ function buildDateFilter(days) {
   return `"${from}"[Date - Publication] : "3000"[Date - Publication]`;
 }
 
+async function fetchPubMed(url, timeout) {
+  for (let attempt = 0; ; attempt++) {
+    await delay(400);
+    const response = await fetch(url, {
+      headers: { "User-Agent": "KetamineAddictionBot/1.0 (research aggregator)" },
+      signal: AbortSignal.timeout(timeout),
+    });
+    if (response.ok) return response;
+    if (attempt === 3 || (response.status !== 429 && response.status < 500)) {
+      throw new Error(`PubMed request failed: HTTP ${response.status}`);
+    }
+    await response.body?.cancel();
+    await delay(2000 * 2 ** attempt);
+  }
+}
+
 async function searchPapers(query, retmax = 50) {
   const url = new URL(PUBMED_SEARCH);
   url.searchParams.set("db", "pubmed");
@@ -43,18 +60,10 @@ async function searchPapers(query, retmax = 50) {
   url.searchParams.set("sort", "date");
   url.searchParams.set("retmode", "json");
 
-  try {
-    const resp = await fetch(url.toString(), {
-      headers: { "User-Agent": "KetamineAddictionBot/1.0 (research aggregator)" },
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    return data?.esearchresult?.idlist ?? [];
-  } catch (err) {
-    console.error(`[ERROR] PubMed search failed: ${err.message}`);
-    return [];
-  }
+  const response = await fetchPubMed(url, 30000);
+  const data = await response.json();
+  if (!Array.isArray(data?.esearchresult?.idlist)) throw new Error("Invalid PubMed search result");
+  return data.esearchresult.idlist;
 }
 
 async function fetchDetails(pmids) {
@@ -64,18 +73,10 @@ async function fetchDetails(pmids) {
   url.searchParams.set("id", pmids.join(","));
   url.searchParams.set("retmode", "xml");
 
-  try {
-    const resp = await fetch(url.toString(), {
-      headers: { "User-Agent": "KetamineAddictionBot/1.0 (research aggregator)" },
-      signal: AbortSignal.timeout(60000),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const xml = await resp.text();
-    return parseXml(xml);
-  } catch (err) {
-    console.error(`[ERROR] PubMed fetch failed: ${err.message}`);
-    return [];
-  }
+  const response = await fetchPubMed(url, 60000);
+  const papers = parseXml(await response.text());
+  if (!papers.length) throw new Error("PubMed returned no details for matching PMIDs");
+  return papers;
 }
 
 function parseXml(xml) {

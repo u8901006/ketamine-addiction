@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 
 const API_BASE = process.env.NVIDIA_API_BASE ?? "https://integrate.api.nvidia.com/v1";
 
-const MODEL_CHAIN = ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b"];
+const MODEL_CHAIN = ["nvidia/nemotron-3-ultra-550b-a55b"];
 
 const SYSTEM_PROMPT = `你是氯胺酮（K他命）成癮研究領域的資深研究員與科學傳播者。你的任務是：
 1. 從提供的醫學文獻中，篩選出最具臨床意義與研究價值的氯胺酮成癮相關論文
